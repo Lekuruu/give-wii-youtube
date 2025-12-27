@@ -117,7 +117,7 @@ func (s *SearchResult) ToTemplateData(thumbnailFormat string) SearchResultTempla
 		PublishedText: s.PublishedText,
 		LengthSeconds: s.LengthSeconds,
 		ViewCount:     s.ViewCount,
-		ThumbnailURL:  thumbnailURL,
+		ThumbnailURL:  strings.Replace(thumbnailURL, "https://", "http://", 1),
 	}
 }
 
@@ -137,7 +137,7 @@ func (v *VideoInfo) ToTemplateData(thumbnailFormat string) VideoEntryTemplateDat
 		LengthSeconds: v.LengthSeconds,
 		ViewCount:     v.ViewCount,
 		LikeCount:     v.LikeCount,
-		ThumbnailURL:  thumbnailURL,
+		ThumbnailURL:  strings.Replace(thumbnailURL, "https://", "http://", 1),
 	}
 }
 
