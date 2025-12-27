@@ -9,13 +9,7 @@ type Logger struct {
 	Name string
 }
 
-func NewLogger(config interface{}) *Logger {
-	name := "wii-youtube"
-	if cfg, ok := config.(*Config); ok {
-		_ = cfg // Could use config for log level, etc.
-	} else if n, ok := config.(string); ok {
-		name = n
-	}
+func NewLogger(name string) *Logger {
 	return &Logger{Name: name}
 }
 

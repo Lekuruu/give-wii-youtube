@@ -85,3 +85,13 @@ func (c *CategoryListing) GetCategory(name string) *Category {
 	}
 	return nil
 }
+
+func (c *CategoryListing) GetTrendingParameters() map[string]string {
+	params := make(map[string]string)
+	for _, cat := range c.Entries {
+		if cat.TrendingParam != "" {
+			params[cat.Name] = cat.TrendingParam
+		}
+	}
+	return params
+}
