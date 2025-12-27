@@ -18,16 +18,18 @@ func HandleCategory(ctx *app.Context, category *app.Category) {
 	var results []providers.SearchResult
 	var err error
 
-	// Use trending param if available, otherwise use search fallback
-	if category.TrendingParam != "" {
-		results, err = ctx.State.Provider.GetTrending(category.TrendingParam, 20)
-	} else {
-		results, err = ctx.State.Provider.GetTrending("", 20)
+	if category.TrendingParam == "" {
+		// Fallback to search
+		HandleCategorySearch(ctx, category.SearchFallback)
+		return
 	}
+
+	// Use trending param, will most likely fail though
+	results, err = ctx.State.Provider.GetTrending(category.TrendingParam, 20)
 
 	if err != nil || len(results) == 0 {
 		// Fallback to search
-		ctx.State.Logger.Errorf("Failed to get trending for %s: %v", category.Name, err)
+		ctx.State.Logger.Debugf("Failed to get trending for %s: %v", category.Name, err)
 		HandleCategorySearch(ctx, category.SearchFallback)
 		return
 	}
