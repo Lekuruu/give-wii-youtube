@@ -1,0 +1,40 @@
+{
+  "categories": [
+    {
+      "name": "trending",
+      "route": "/trending",
+      "trendingParam": "",
+      "searchFallback": "trending"
+    },
+    {
+      "name": "music",
+      "route": "/music",
+      "trendingParam": "4gINGgt5dG1hX2NoYXJ0cw%3D%3D",
+      "searchFallback": "music trending"
+    },
+    {
+      "name": "gaming",
+      "route": "/gaming",
+      "trendingParam": "Egh0cmVuZGluZw%3D%3D",
+      "searchFallback": "gaming trending"
+    },
+    {
+      "name": "sports",
+      "route": "/sports",
+      "trendingParam": "EglzcG9ydHN0YWKSAQMIwwY%3D",
+      "searchFallback": "sports trending"
+    },
+    {
+      "name": "news",
+      "route": "/news",
+      "trendingParam": "EgDSBwIIAQ%3D%3D",
+      "searchFallback": "news trending"
+    },
+    {
+      "name": "movies",
+      "route": "/movies",
+      "trendingParam": "4gIKGgh0cmFpbGVycw%3D%3D",
+      "searchFallback": "movies trailers"
+    }
+  ]
+}
