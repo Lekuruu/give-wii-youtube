@@ -13,6 +13,7 @@ type Config struct {
 	Server struct {
 		Host string `env:"HOST" envDefault:"0.0.0.0"`
 		Port int    `env:"PORT" envDefault:"5005"`
+		Url  string `env:"URL" envDefault:"http://localhost:5005"`
 	}
 	Storage struct {
 		Type string `env:"STORAGE_TYPE" envDefault:"local"`

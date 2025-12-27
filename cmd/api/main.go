@@ -76,7 +76,7 @@ func main() {
 }
 
 func registerRoutes(server *app.Server, streamer *routes.VideoStreamer, staticDir string) {
-	routes.RegisterSWFRoutes(server, staticDir)
+	routes.RegisterStaticRoutes(server, staticDir)
 	routes.RegisterInfoRoutes(server)
 	routes.RegisterSearchRoutes(server)
 	routes.RegisterCategoryRoutes(server)
