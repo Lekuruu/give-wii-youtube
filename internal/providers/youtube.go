@@ -26,16 +26,6 @@ const (
 	SuggestUrl         = "https://suggestqueries-clients6.youtube.com/complete/search"
 )
 
-// Client context for Innertube requests
-var clientContext = map[string]interface{}{
-	"client": map[string]interface{}{
-		"clientName":    "WEB",
-		"clientVersion": "2.20230615.09.00",
-		"hl":            "en",
-		"gl":            "US",
-	},
-}
-
 // NewYouTubeProvider creates a new YouTube provider
 func NewYouTubeProvider(trendingParams map[string]string) *YouTubeProvider {
 	return &YouTubeProvider{
@@ -58,7 +48,6 @@ func (p *YouTubeProvider) performInnertubeRequest(endpoint string, payload map[s
 
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
-	req.Header.Set("Accept-Language", "en-US,en;q=0.9")
 	req.Header.Set("X-YouTube-Client-Name", "1")
 	req.Header.Set("X-YouTube-Client-Version", "2.20231221")
 
@@ -82,9 +71,9 @@ func (p *YouTubeProvider) performInnertubeRequest(endpoint string, payload map[s
 }
 
 // GetVideoInfo retrieves detailed information about a video
-func (p *YouTubeProvider) GetVideoInfo(videoID string) (*VideoInfo, error) {
+func (p *YouTubeProvider) GetVideoInfo(videoID string, country string, language string) (*VideoInfo, error) {
 	payload := map[string]interface{}{
-		"context": clientContext,
+		"context": getClientContext(country, language),
 		"videoId": videoID,
 	}
 
@@ -126,13 +115,13 @@ func (p *YouTubeProvider) GetVideoInfo(videoID string) (*VideoInfo, error) {
 }
 
 // Search performs a video search
-func (p *YouTubeProvider) Search(query string, maxResults int) ([]SearchResult, error) {
+func (p *YouTubeProvider) Search(query string, maxResults int, country string, language string) ([]SearchResult, error) {
 	if maxResults <= 0 {
 		maxResults = 20
 	}
 
 	payload := map[string]interface{}{
-		"context": clientContext,
+		"context": getClientContext(country, language),
 		"query":   query,
 		"params":  "",
 	}
@@ -146,13 +135,13 @@ func (p *YouTubeProvider) Search(query string, maxResults int) ([]SearchResult, 
 }
 
 // GetTrending retrieves trending videos for a category
-func (p *YouTubeProvider) GetTrending(category string, maxResults int) ([]SearchResult, error) {
+func (p *YouTubeProvider) GetTrending(category string, maxResults int, country string, language string) ([]SearchResult, error) {
 	if maxResults <= 0 {
 		maxResults = 20
 	}
 
 	payload := map[string]interface{}{
-		"context":  clientContext,
+		"context":  getClientContext(country, language),
 		"browseId": "FEtrending",
 	}
 
@@ -171,12 +160,12 @@ func (p *YouTubeProvider) GetTrending(category string, maxResults int) ([]Search
 }
 
 // GetSearchSuggestions retrieves search autocomplete suggestions
-func (p *YouTubeProvider) GetSearchSuggestions(query string) (*SearchSuggestion, error) {
+func (p *YouTubeProvider) GetSearchSuggestions(query string, country string, language string) (*SearchSuggestion, error) {
 	params := url.Values{}
 	params.Set("client", "youtube")
 	params.Set("ds", "yt")
-	params.Set("hl", "en")
-	params.Set("gl", "US")
+	params.Set("hl", language)
+	params.Set("gl", country)
 	params.Set("q", query)
 
 	reqUrl := fmt.Sprintf("%s?%s", SuggestUrl, params.Encode())
@@ -490,4 +479,15 @@ func (p *YouTubeProvider) checkVerifiedStatus(vr map[string]interface{}) bool {
 		}
 	}
 	return false
+}
+
+func getClientContext(country string, language string) map[string]interface{} {
+	return map[string]interface{}{
+		"client": map[string]interface{}{
+			"clientName":    "WEB",
+			"clientVersion": "2.20230615.09.00",
+			"hl":            language,
+			"gl":            country,
+		},
+	}
 }

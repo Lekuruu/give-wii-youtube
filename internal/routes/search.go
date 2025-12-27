@@ -20,7 +20,7 @@ func HandleSearchSuggestions(ctx *app.Context) {
 		return
 	}
 
-	suggestion, err := ctx.State.Provider.GetSearchSuggestions(query)
+	suggestion, err := ctx.State.Provider.GetSearchSuggestions(query, "US", "en")
 	if err != nil {
 		ctx.State.Logger.Errorf("Failed to fetch suggestions: %v", err)
 		ctx.Response.WriteHeader(http.StatusInternalServerError)
@@ -47,7 +47,7 @@ func HandleVideoSearch(ctx *app.Context) {
 		return
 	}
 
-	results, err := ctx.State.Provider.Search(query, 20)
+	results, err := ctx.State.Provider.Search(query, 20, "US", "en")
 	if err != nil {
 		ctx.State.Logger.Errorf("Search failed for query '%s': %v", query, err)
 		ctx.Response.WriteHeader(http.StatusInternalServerError)

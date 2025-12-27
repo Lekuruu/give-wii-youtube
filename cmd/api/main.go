@@ -137,14 +137,14 @@ func setupThumbnailCache(state *app.State) *app.ThumbnailCache {
 		var err error
 
 		if category.TrendingParam != "" {
-			results, err = state.Provider.GetTrending(category.TrendingParam, 1)
+			results, err = state.Provider.GetTrending(category.TrendingParam, 1, "US", "en")
 		} else {
-			results, err = state.Provider.GetTrending("", 1)
+			results, err = state.Provider.GetTrending("", 1, "US", "en")
 		}
 
 		if err != nil || len(results) == 0 {
 			// Fallback to search
-			results, err = state.Provider.Search(category.SearchFallback, 1)
+			results, err = state.Provider.Search(category.SearchFallback, 1, "US", "en")
 			if err != nil || len(results) == 0 {
 				return ""
 			}

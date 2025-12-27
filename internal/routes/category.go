@@ -25,7 +25,7 @@ func HandleCategory(ctx *app.Context, category *app.Category) {
 	}
 
 	// Use trending param, will most likely fail though
-	results, err = ctx.State.Provider.GetTrending(category.TrendingParam, 20)
+	results, err = ctx.State.Provider.GetTrending(category.TrendingParam, 20, "US", "en")
 
 	if err != nil || len(results) == 0 {
 		// Fallback to search
@@ -46,7 +46,7 @@ func HandleCategory(ctx *app.Context, category *app.Category) {
 
 // HandleCategorySearch uses search as fallback for categories not in trending API
 func HandleCategorySearch(ctx *app.Context, query string) {
-	results, err := ctx.State.Provider.Search(query, 20)
+	results, err := ctx.State.Provider.Search(query, 20, "US", "en")
 	if err != nil {
 		ctx.State.Logger.Errorf("Category search failed for '%s': %v", query, err)
 		writeXMLError(ctx.Response, err.Error())

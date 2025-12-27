@@ -2,6 +2,7 @@ package providers
 
 import "fmt"
 
+// getString safely extracts a string value
 func getString(m map[string]interface{}, key string) string {
 	if v, ok := m[key].(string); ok {
 		return v
@@ -9,6 +10,7 @@ func getString(m map[string]interface{}, key string) string {
 	return ""
 }
 
+// getInt safely extracts an integer value
 func getInt(m map[string]interface{}, key string) int {
 	switch v := m[key].(type) {
 	case float64:
@@ -23,6 +25,7 @@ func getInt(m map[string]interface{}, key string) int {
 	return 0
 }
 
+// getInt64 safely extracts an int64 value
 func getInt64(m map[string]interface{}, key string) int64 {
 	switch v := m[key].(type) {
 	case float64:
@@ -39,6 +42,7 @@ func getInt64(m map[string]interface{}, key string) int64 {
 	return 0
 }
 
+// getBool safely extracts a boolean value
 func getBool(m map[string]interface{}, key string) bool {
 	if v, ok := m[key].(bool); ok {
 		return v
