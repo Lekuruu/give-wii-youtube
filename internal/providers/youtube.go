@@ -14,7 +14,6 @@ import (
 
 // YouTubeProvider implements Provider using YouTube's Innertube API
 type YouTubeProvider struct {
-	ApiKey         string
 	Http           *http.Client
 	TrendingParams map[string]string
 }
@@ -31,17 +30,16 @@ const (
 var clientContext = map[string]interface{}{
 	"client": map[string]interface{}{
 		"clientName":    "WEB",
-		"clientVersion": "2.20231221",
+		"clientVersion": "2.20230615.09.00",
 		"hl":            "en",
 		"gl":            "US",
 	},
 }
 
 // NewYouTubeProvider creates a new YouTube provider
-func NewYouTubeProvider(apiKey string, trendingParams map[string]string) *YouTubeProvider {
+func NewYouTubeProvider(trendingParams map[string]string) *YouTubeProvider {
 	return &YouTubeProvider{
 		Http:           &http.Client{Timeout: 30 * time.Second},
-		ApiKey:         apiKey,
 		TrendingParams: trendingParams,
 	}
 }

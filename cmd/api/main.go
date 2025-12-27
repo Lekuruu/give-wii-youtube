@@ -33,10 +33,7 @@ func main() {
 	)
 
 	// Initialize provider
-	state.Provider = providers.NewYouTubeProvider(
-		state.Config.YouTube.ApiKey,
-		state.Categories.GetTrendingParameters(),
-	)
+	state.Provider = providers.NewYouTubeProvider(state.Categories.GetTrendingParameters())
 
 	// Initialize paths
 	staticDir, downloadDir, templatesDir, cacheDir := initializePaths(state)

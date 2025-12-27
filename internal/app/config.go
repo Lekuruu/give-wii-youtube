@@ -19,9 +19,6 @@ type Config struct {
 		Type string `env:"STORAGE_TYPE" envDefault:"local"`
 		Path string `env:"STORAGE_PATH" envDefault:"./data"`
 	}
-	YouTube struct {
-		ApiKey string `env:"YOUTUBE_API_KEY"`
-	}
 	Video struct {
 		Quality        string `env:"VIDEO_QUALITY" envDefault:"360"`
 		DownloadFolder string `env:"DOWNLOAD_FOLDER" envDefault:"./data/downloads"`
