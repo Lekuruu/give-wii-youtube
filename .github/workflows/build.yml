@@ -1,0 +1,58 @@
+name: Build Application Binaries
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  release:
+    types: [ created ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - goos: windows
+            goarch: amd64
+            output: give-wii-youtube-windows.exe
+            artifact: give-wii-youtube-windows
+          - goos: linux
+            goarch: amd64
+            output: give-wii-youtube-linux
+            artifact: give-wii-youtube-linux
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version-file: 'go.mod'
+        cache: true
+
+    - name: Build for ${{ matrix.goos }}
+      env:
+        GOOS: ${{ matrix.goos }}
+        GOARCH: ${{ matrix.goarch }}
+      run: |
+        go build -ldflags="-s -w" -o ${{ matrix.output }} ./cmd/give-wii-youtube/
+
+    - name: Upload Binary
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ matrix.artifact }}
+        path: ${{ matrix.output }}
+
+    - name: Upload Release Asset
+      if: github.event_name == 'release'
+      uses: softprops/action-gh-release@v2
+      with:
+        files: ${{ matrix.output }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

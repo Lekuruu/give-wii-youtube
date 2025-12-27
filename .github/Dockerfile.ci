@@ -1,0 +1,32 @@
+# syntax=docker/dockerfile:1.7
+
+# Build stage to install runtime deps
+FROM alpine:3.20 AS runtime-deps
+RUN apk add --no-cache ca-certificates ffmpeg
+
+# Minimal runtime image that copies the app and required runtime files
+FROM alpine:3.20
+
+WORKDIR /app
+
+# TARGETARCH is provided by buildx for each platform
+ARG TARGETARCH
+
+# Copy ffmpeg binaries and their runtime libs/presets from the deps stage
+COPY --from=runtime-deps /usr/bin/ffmpeg /usr/bin/ffprobe /usr/bin/
+COPY --from=runtime-deps /usr/lib/ /usr/lib/
+COPY --from=runtime-deps /lib/ld-musl-* /lib/
+COPY --from=runtime-deps /usr/share/ffmpeg /usr/share/ffmpeg
+
+# Add CA certificates
+COPY --from=runtime-deps /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+
+# Copy the prebuilt binary produced by the CI step
+COPY dist/give-wii-youtube-linux-$TARGETARCH /app/give-wii-youtube
+
+# Volumes used by the application
+VOLUME ["/app/static"]
+VOLUME ["/app/data"]
+
+# Run the compiled binary
+ENTRYPOINT ["/app/give-wii-youtube"]
