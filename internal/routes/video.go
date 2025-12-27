@@ -101,6 +101,9 @@ func (vs *VideoStreamer) HandleGetVideo(ctx *app.Context) {
 	vs.serveFile(ctx, webmPath, "video/webm")
 }
 
+// Hardcoded content length for flv streaming
+const flvContentLength = 500000000
+
 // HandleGitVideo streams video as flv with real-time transcoding
 func (vs *VideoStreamer) HandleGitVideo(ctx *app.Context) {
 	videoID := ctx.Request.URL.Query().Get("video_id")
@@ -112,40 +115,58 @@ func (vs *VideoStreamer) HandleGitVideo(ctx *app.Context) {
 
 	// Get direct video url using yt-dlp
 	videoUrl := fmt.Sprintf(ctx.State.Provider.GetVideoUrlFormat(), videoID)
-	streamUrl, err := vs.getVideoUrl(videoUrl)
+	streamUrl, err := vs.getStreamUrl(videoUrl)
 	if err != nil {
 		vs.Logger.Errorf("Failed to get video url for %s: %v", videoID, err)
 		ctx.Response.WriteHeader(http.StatusInternalServerError)
-		ctx.Response.Write([]byte("Failed to get video url"))
+		ctx.Response.Write([]byte(fmt.Sprintf("yt-dlp error: %v", err)))
 		return
 	}
 
 	// Parse range header for seeking
 	rangeHeader := ctx.Request.Header.Get("Range")
 	rangeStart := 0
+	rangeEnd := flvContentLength - 1
+
 	if rangeHeader != "" {
-		if strings.HasPrefix(rangeHeader, "bytes=") {
-			parts := strings.Split(strings.TrimPrefix(rangeHeader, "bytes="), "-")
-			if len(parts) > 0 {
-				rangeStart, _ = strconv.Atoi(parts[0])
+		var start, end int
+		n, _ := fmt.Sscanf(rangeHeader, "bytes=%d-%d", &start, &end)
+		if n >= 1 {
+			rangeStart = start
+			if n == 2 {
+				rangeEnd = end
 			}
+		}
+
+		if rangeStart >= flvContentLength || rangeEnd >= flvContentLength {
+			ctx.Response.WriteHeader(http.StatusRequestedRangeNotSatisfiable)
+			ctx.Response.Write([]byte("Requested range not satisfiable"))
+			return
 		}
 	}
 
-	// Calculate start time based on byte position
+	// Calculate start time and duration based on byte position
 	// Approximate bitrate: 500kbps video + 96kbps audio
 	totalBitrate := float64(500000 + 96000)
 	bytesPerSecond := totalBitrate / 8
 	startTime := float64(rangeStart) / bytesPerSecond
+	duration := float64(rangeEnd-rangeStart+1) / bytesPerSecond
 
 	// Set headers for streaming
 	ctx.Response.Header().Set("Content-Type", "video/x-flv")
+	ctx.Response.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s.flv"`, videoID))
 	ctx.Response.Header().Set("Accept-Ranges", "bytes")
-	ctx.Response.Header().Set("Cache-Control", "no-cache")
-	ctx.Response.Header().Set("Transfer-Encoding", "chunked")
 
-	// Stream with ffmpeg
-	vs.streamWithFFmpeg(ctx, streamUrl, startTime)
+	if rangeHeader != "" {
+		ctx.Response.Header().Set("Content-Range", fmt.Sprintf("bytes %d-%d/%d", rangeStart, rangeEnd, flvContentLength))
+		ctx.Response.Header().Set("Content-Length", strconv.Itoa(rangeEnd-rangeStart+1))
+		ctx.Response.WriteHeader(http.StatusPartialContent)
+		vs.streamWithFFmpeg(ctx, streamUrl, startTime, duration)
+		return
+	}
+
+	ctx.Response.Header().Set("Content-Length", strconv.Itoa(flvContentLength))
+	vs.streamWithFFmpeg(ctx, streamUrl, startTime, duration)
 }
 
 // HandleServeVideo serves a cached video file
@@ -201,10 +222,10 @@ func (vs *VideoStreamer) downloadVideo(videoUrl, outputPath string) error {
 	return nil
 }
 
-// getVideoUrl gets a direct video url using yt-dlp
-func (vs *VideoStreamer) getVideoUrl(videoUrl string) (string, error) {
+// getStreamUrl gets a direct video url for flv streaming
+func (vs *VideoStreamer) getStreamUrl(videoUrl string) (string, error) {
 	dl := ytdlp.New().
-		FormatSort(fmt.Sprintf("res:%s,ext:mp4:m4a", vs.Quality)).
+		Format(fmt.Sprintf("5/18/best[ext=mp4]/best[height<=%s]", vs.Quality)).
 		NoPlaylist().
 		Print("urls")
 
@@ -260,35 +281,30 @@ func (vs *VideoStreamer) convertToWebm(inputPath, outputPath string) error {
 	return nil
 }
 
-// streamWithFFmpeg streams video content through FFmpeg transcoding
-func (vs *VideoStreamer) streamWithFFmpeg(ctx *app.Context, streamUrl string, startTime float64) {
-	// Calculate bitrate based on quality
-	bitrate := "300k"
-	switch vs.Quality {
-	case "480":
-		bitrate = "500k"
-	case "720":
-		bitrate = "1000k"
-	}
-
-	// Build input with optional seek
+// streamWithFFmpeg streams video content through FFmpeg transcoding (hardcoded 240p for Wii)
+func (vs *VideoStreamer) streamWithFFmpeg(ctx *app.Context, streamUrl string, startTime, duration float64) {
 	inputKwArgs := ffmpeg.KwArgs{}
 	if startTime > 0 {
 		inputKwArgs["ss"] = fmt.Sprintf("%.2f", startTime)
 	}
 
+	outputKwArgs := ffmpeg.KwArgs{
+		"c:v": "flv1",
+		"b:v": "500k",
+		"vf":  "scale=-1:240",
+		"c:a": "mp3",
+		"b:a": "96k",
+		"r":   "24",
+		"g":   "24",
+		"f":   "flv",
+	}
+	if duration > 0 {
+		outputKwArgs["t"] = fmt.Sprintf("%.2f", duration)
+	}
+
 	// Create the ffmpeg stream
 	stream := ffmpeg.Input(streamUrl, inputKwArgs).
-		Output("pipe:1", ffmpeg.KwArgs{
-			"c:v": "flv1",
-			"b:v": bitrate,
-			"vf":  fmt.Sprintf("scale=-1:%s", vs.Quality),
-			"c:a": "mp3",
-			"b:a": "96k",
-			"r":   "24",
-			"g":   "24",
-			"f":   "flv",
-		})
+		Output("pipe:1", outputKwArgs)
 
 	// Get the command to run with pipe output
 	cmd := stream.Compile()
@@ -310,8 +326,8 @@ func (vs *VideoStreamer) streamWithFFmpeg(ctx *app.Context, streamUrl string, st
 		return
 	}
 
-	// Stream output to response
-	buf := make([]byte, 32*1024) // 32KB buffer
+	// Stream output to response (32KB buffer)
+	buf := make([]byte, 32*1024)
 
 	for {
 		n, err := stdout.Read(buf)
@@ -359,6 +375,7 @@ func (vs *VideoStreamer) serveFile(ctx *app.Context, filePath, contentType strin
 
 	// Handle range requests
 	rangeHeader := ctx.Request.Header.Get("Range")
+
 	if rangeHeader != "" && strings.HasPrefix(rangeHeader, "bytes=") {
 		ranges := strings.TrimPrefix(rangeHeader, "bytes=")
 		parts := strings.Split(ranges, "-")

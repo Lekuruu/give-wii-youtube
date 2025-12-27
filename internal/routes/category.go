@@ -29,7 +29,6 @@ func HandleCategory(ctx *app.Context, category *app.Category) {
 
 	if err != nil || len(results) == 0 {
 		// Fallback to search
-		ctx.State.Logger.Debugf("Failed to get trending for %s: %v", category.Name, err)
 		HandleCategorySearch(ctx, category.SearchFallback)
 		return
 	}
