@@ -128,3 +128,6 @@ data/
 
 # Air hot-reloading temp files
 tmp/
+
+# Static swf files, which may be overwritten
+static/*.swf
