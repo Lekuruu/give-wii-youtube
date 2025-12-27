@@ -20,7 +20,8 @@ func HandleSearchSuggestions(ctx *app.Context) {
 		return
 	}
 
-	suggestion, err := ctx.State.Provider.GetSearchSuggestions(query, "US", "en")
+	country, language := resolveLocationMetadata(ctx.Request)
+	suggestion, err := ctx.State.Provider.GetSearchSuggestions(query, country, language)
 	if err != nil {
 		ctx.State.Logger.Errorf("Failed to fetch suggestions: %v", err)
 		ctx.Response.WriteHeader(http.StatusInternalServerError)

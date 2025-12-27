@@ -21,7 +21,8 @@ func HandleGetVideoInfo(ctx *app.Context) {
 		return
 	}
 
-	info, err := ctx.State.Provider.GetVideoInfo(videoID, "US", "en")
+	country, language := resolveLocationMetadata(ctx.Request)
+	info, err := ctx.State.Provider.GetVideoInfo(videoID, country, language)
 	if err != nil {
 		ctx.State.Logger.Errorf("Failed to get video info for %s: %v", videoID, err)
 		ctx.Response.WriteHeader(http.StatusInternalServerError)
@@ -42,7 +43,8 @@ func HandleVideoFeed(ctx *app.Context) {
 		return
 	}
 
-	info, err := ctx.State.Provider.GetVideoInfo(videoID, "US", "en")
+	country, language := resolveLocationMetadata(ctx.Request)
+	info, err := ctx.State.Provider.GetVideoInfo(videoID, country, language)
 	if err != nil {
 		ctx.State.Logger.Errorf("Failed to get video feed for %s: %v", videoID, err)
 		ctx.Response.WriteHeader(http.StatusInternalServerError)

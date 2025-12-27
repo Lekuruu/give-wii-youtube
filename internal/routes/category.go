@@ -24,8 +24,11 @@ func HandleCategory(ctx *app.Context, category *app.Category) {
 		return
 	}
 
+	// Try to resolve location metadata
+	country, language := resolveLocationMetadata(ctx.Request)
+
 	// Use trending param, will most likely fail though
-	results, err = ctx.State.Provider.GetTrending(category.TrendingParam, 20, "US", "en")
+	results, err = ctx.State.Provider.GetTrending(category.TrendingParam, 20, country, language)
 
 	if err != nil || len(results) == 0 {
 		// Fallback to search
@@ -46,7 +49,8 @@ func HandleCategory(ctx *app.Context, category *app.Category) {
 
 // HandleCategorySearch uses search as fallback for categories not in trending API
 func HandleCategorySearch(ctx *app.Context, query string) {
-	results, err := ctx.State.Provider.Search(query, 20, "US", "en")
+	country, language := resolveLocationMetadata(ctx.Request)
+	results, err := ctx.State.Provider.Search(query, 20, country, language)
 	if err != nil {
 		ctx.State.Logger.Errorf("Category search failed for '%s': %v", query, err)
 		writeXMLError(ctx.Response, err.Error())
