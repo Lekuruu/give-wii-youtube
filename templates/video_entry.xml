@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<entry xmlns:media='http://search.yahoo.com/mrss/' xmlns:yt='http://www.youtube.com/xml/schemas/2015'>
+    <id>http://gdata.youtube.com/feeds/api/videos/{{.VideoID}}</id>
+    <title>{{.Title | escape}}</title>
+    <published>{{.PublishedText}}</published>
+    <author>
+        <name>{{.Author | escape}}</name>
+        <uri>http://www.youtube.com/channel/{{.AuthorID}}</uri>
+    </author>
+    <media:group>
+        <media:thumbnail yt:name="hqdefault" url="{{.ThumbnailURL}}" width="320" height="240"/>
+        <yt:duration seconds="{{.LengthSeconds}}"/>
+        <yt:videoid>{{.VideoID}}</yt:videoid>
+    </media:group>
+    <yt:statistics viewCount="{{.ViewCount}}" likeCount="{{.LikeCount}}"/>
+</entry>

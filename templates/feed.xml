@@ -1,0 +1,31 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<feed xmlns:openSearch='http://a9.com/-/spec/opensearch/1.1/' xmlns:media='http://search.yahoo.com/mrss/' xmlns:yt='http://www.youtube.com/xml/schemas/2015'>
+    <title type='text'>Videos</title>
+    <author>
+        <name>WiiTube</name>
+        <uri>http://wiitube.local</uri>
+    </author>
+    <generator ver='1.0' uri='http://wiitube.local/'>WiiTube</generator>
+    <openSearch:totalResults>{{len .Results}}</openSearch:totalResults>
+    <openSearch:startIndex>1</openSearch:startIndex>
+    <openSearch:itemsPerPage>20</openSearch:itemsPerPage>
+    {{range .Results}}
+    <entry>
+        <id>http://gdata.youtube.com/feeds/api/videos/{{.VideoID}}</id>
+        <title>{{.Title | escape}}</title>
+        <published>{{.PublishedText}}</published>
+        <author>
+            <name>{{.Author | escape}}</name>
+            <uri>http://www.youtube.com/channel/{{.AuthorID}}</uri>
+        </author>
+        <media:group>
+            <media:thumbnail yt:name="hqdefault" url="{{.ThumbnailURL}}" width="480" height="360"/>
+            <media:title type="plain">{{.Title | escape}}</media:title>
+            <media:description type="plain">{{.Description | escape}}</media:description>
+            <yt:duration seconds="{{.LengthSeconds}}"/>
+            <yt:videoid>{{.VideoID}}</yt:videoid>
+        </media:group>
+        <yt:statistics viewCount="{{.ViewCount}}"/>
+    </entry>
+    {{end}}
+</feed>
