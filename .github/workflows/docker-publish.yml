@@ -66,7 +66,7 @@ jobs:
         for ARCH in amd64 arm64 arm; do
           echo "Building for linux/$ARCH"
           GOARM=7 GOARCH=$ARCH \
-            go build -trimpath -ldflags="-s -w" -o "dist/give-wii-youtube-linux-$ARCH" ./cmd/give-wii-youtube/
+            go build -trimpath -ldflags="-s -w" -o "dist/give-wii-youtube-linux-$ARCH" ./cmd/api/
         done
 
     - name: Log in to GitHub Container Registry

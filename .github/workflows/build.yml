@@ -41,7 +41,7 @@ jobs:
         GOOS: ${{ matrix.goos }}
         GOARCH: ${{ matrix.goarch }}
       run: |
-        go build -ldflags="-s -w" -o ${{ matrix.output }} ./cmd/give-wii-youtube/
+        go build -ldflags="-s -w" -o ${{ matrix.output }} ./cmd/api/
 
     - name: Upload Binary
       uses: actions/upload-artifact@v4
