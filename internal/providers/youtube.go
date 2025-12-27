@@ -114,34 +114,16 @@ func (p *YouTubeProvider) GetVideoInfo(videoID string) (*VideoInfo, error) {
 	// Get keywords
 	if keywords, ok := videoDetails["keywords"].([]interface{}); ok {
 		for _, kw := range keywords {
-			if s, ok := kw.(string); ok {
-				info.Keywords = append(info.Keywords, s)
+			s, ok := kw.(string)
+			if !ok {
+				continue
 			}
+			info.Keywords = append(info.Keywords, s)
 		}
 	}
 
-	// Get thumbnails
-	if thumbnail, ok := videoDetails["thumbnail"].(map[string]interface{}); ok {
-		if thumbs, ok := thumbnail["thumbnails"].([]interface{}); ok {
-			for _, t := range thumbs {
-				if tm, ok := t.(map[string]interface{}); ok {
-					info.Thumbnails = append(info.Thumbnails, Thumbnail{
-						URL:    getString(tm, "url"),
-						Width:  getInt(tm, "width"),
-						Height: getInt(tm, "height"),
-					})
-				}
-			}
-		}
-	}
-
-	// Get published date from microformat
-	if microformat, ok := data["microformat"].(map[string]interface{}); ok {
-		if renderer, ok := microformat["playerMicroformatRenderer"].(map[string]interface{}); ok {
-			info.PublishedText = getString(renderer, "publishDate")
-		}
-	}
-
+	info.Thumbnails = extractThumbnails(videoDetails)
+	info.PublishedText = getNestedString(data, "microformat", "playerMicroformatRenderer", "publishDate")
 	return info, nil
 }
 
@@ -402,51 +384,28 @@ func (p *YouTubeProvider) extractVideosFromItems(items []interface{}) []SearchRe
 			continue
 		}
 
-		// Direct video renderer
-		if videoRenderer, ok := itemMap["videoRenderer"].(map[string]interface{}); ok {
+		if videoRenderer := getMap(itemMap, "videoRenderer"); videoRenderer != nil {
 			results = append(results, p.parseVideoRenderer(videoRenderer))
 			continue
 		}
 
-		// Item section renderer
-		if itemSection, ok := itemMap["itemSectionRenderer"].(map[string]interface{}); ok {
-			if contents, ok := itemSection["contents"].([]interface{}); ok {
-				results = append(results, p.extractVideosFromItems(contents)...)
-			}
+		if contents := getNestedSlice(itemMap, "itemSectionRenderer", "contents"); contents != nil {
+			results = append(results, p.extractVideosFromItems(contents)...)
 			continue
 		}
 
-		// Shelf renderer
-		if shelf, ok := itemMap["shelfRenderer"].(map[string]interface{}); ok {
-			if content, ok := shelf["content"].(map[string]interface{}); ok {
-				if expanded, ok := content["expandedShelfContentsRenderer"].(map[string]interface{}); ok {
-					if items, ok := expanded["items"].([]interface{}); ok {
-						results = append(results, p.extractVideosFromItems(items)...)
-					}
-				}
-			}
+		if items := getNestedSlice(itemMap, "shelfRenderer", "content", "expandedShelfContentsRenderer", "items"); items != nil {
+			results = append(results, p.extractVideosFromItems(items)...)
 			continue
 		}
 
-		// Rich section renderer
-		if richSection, ok := itemMap["richSectionRenderer"].(map[string]interface{}); ok {
-			if content, ok := richSection["content"].(map[string]interface{}); ok {
-				if richShelf, ok := content["richShelfRenderer"].(map[string]interface{}); ok {
-					if contents, ok := richShelf["contents"].([]interface{}); ok {
-						results = append(results, p.extractVideosFromItems(contents)...)
-					}
-				}
-			}
+		if contents := getNestedSlice(itemMap, "richSectionRenderer", "content", "richShelfRenderer", "contents"); contents != nil {
+			results = append(results, p.extractVideosFromItems(contents)...)
 			continue
 		}
 
-		// Rich item renderer
-		if richItem, ok := itemMap["richItemRenderer"].(map[string]interface{}); ok {
-			if content, ok := richItem["content"].(map[string]interface{}); ok {
-				if videoRenderer, ok := content["videoRenderer"].(map[string]interface{}); ok {
-					results = append(results, p.parseVideoRenderer(videoRenderer))
-				}
-			}
+		if videoRenderer := getNestedMap(itemMap, "richItemRenderer", "content", "videoRenderer"); videoRenderer != nil {
+			results = append(results, p.parseVideoRenderer(videoRenderer))
 			continue
 		}
 	}
@@ -461,101 +420,76 @@ func (p *YouTubeProvider) parseVideoRenderer(vr map[string]interface{}) SearchRe
 		VideoID: getString(vr, "videoId"),
 	}
 
-	// Title
-	if title, ok := vr["title"].(map[string]interface{}); ok {
-		if runs, ok := title["runs"].([]interface{}); ok && len(runs) > 0 {
-			if run, ok := runs[0].(map[string]interface{}); ok {
-				result.Title = getString(run, "text")
-			}
-		}
+	result.Title = getRunsText(vr, "title")
+	result.Author = getRunsText(vr, "ownerText")
+
+	if browseEndpoint := getNestedMap(vr, "ownerText", "runs", "0", "navigationEndpoint", "browseEndpoint"); browseEndpoint != nil {
+		result.AuthorID = getString(browseEndpoint, "browseId")
+		result.AuthorURL = getString(browseEndpoint, "canonicalBaseUrl")
 	}
 
-	// Author
-	if ownerText, ok := vr["ownerText"].(map[string]interface{}); ok {
-		if runs, ok := ownerText["runs"].([]interface{}); ok && len(runs) > 0 {
-			if run, ok := runs[0].(map[string]interface{}); ok {
-				result.Author = getString(run, "text")
+	result.Thumbnails = extractThumbnails(vr)
+	result.Description = getRunsText(vr, "descriptionSnippet")
 
-				if navEndpoint, ok := run["navigationEndpoint"].(map[string]interface{}); ok {
-					if browseEndpoint, ok := navEndpoint["browseEndpoint"].(map[string]interface{}); ok {
-						result.AuthorID = getString(browseEndpoint, "browseId")
-						result.AuthorURL = getString(browseEndpoint, "canonicalBaseUrl")
-					}
-				}
-			}
-		}
-	}
-
-	// Thumbnails
-	if thumbnail, ok := vr["thumbnail"].(map[string]interface{}); ok {
-		if thumbs, ok := thumbnail["thumbnails"].([]interface{}); ok {
-			for _, t := range thumbs {
-				if tm, ok := t.(map[string]interface{}); ok {
-					result.Thumbnails = append(result.Thumbnails, Thumbnail{
-						URL:    getString(tm, "url"),
-						Width:  getInt(tm, "width"),
-						Height: getInt(tm, "height"),
-					})
-				}
-			}
-		}
-	}
-
-	// Description
-	if descSnippet, ok := vr["descriptionSnippet"].(map[string]interface{}); ok {
-		if runs, ok := descSnippet["runs"].([]interface{}); ok && len(runs) > 0 {
-			if run, ok := runs[0].(map[string]interface{}); ok {
-				result.Description = getString(run, "text")
-			}
-		}
-	}
-
-	// View count
-	if viewCountText, ok := vr["viewCountText"].(map[string]interface{}); ok {
+	if viewCountText := getMap(vr, "viewCountText"); viewCountText != nil {
 		result.ViewCountText = getString(viewCountText, "simpleText")
 		result.ViewCount = ParseViewCount(result.ViewCountText)
 	}
 
-	// Published time
-	if publishedText, ok := vr["publishedTimeText"].(map[string]interface{}); ok {
-		result.PublishedText = getString(publishedText, "simpleText")
-	}
-
-	// Duration
-	if lengthText, ok := vr["lengthText"].(map[string]interface{}); ok {
+	if lengthText := getMap(vr, "lengthText"); lengthText != nil {
 		result.LengthText = getString(lengthText, "simpleText")
 		result.LengthSeconds = ParseDuration(result.LengthText)
 	}
 
-	// Live status
-	if badges, ok := vr["badges"].([]interface{}); ok {
-		for _, badge := range badges {
-			if b, ok := badge.(map[string]interface{}); ok {
-				if metaBadge, ok := b["metadataBadgeRenderer"].(map[string]interface{}); ok {
-					label := getString(metaBadge, "label")
-					if strings.Contains(strings.ToUpper(label), "LIVE") {
-						result.IsLive = true
-						break
-					}
-				}
-			}
-		}
-	}
-
-	// Author verified
-	if ownerBadges, ok := vr["ownerBadges"].([]interface{}); ok {
-		for _, badge := range ownerBadges {
-			if b, ok := badge.(map[string]interface{}); ok {
-				if metaBadge, ok := b["metadataBadgeRenderer"].(map[string]interface{}); ok {
-					style := getString(metaBadge, "style")
-					if style == "BADGE_STYLE_TYPE_VERIFIED" {
-						result.AuthorVerified = true
-						break
-					}
-				}
-			}
-		}
-	}
-
+	result.PublishedText = getNestedString(vr, "publishedTimeText", "simpleText")
+	result.IsLive = p.checkLiveStatus(vr)
+	result.AuthorVerified = p.checkVerifiedStatus(vr)
 	return result
+}
+
+// checkLiveStatus checks if a video is live from badges
+func (p *YouTubeProvider) checkLiveStatus(vr map[string]interface{}) bool {
+	badges, ok := vr["badges"].([]interface{})
+	if !ok {
+		return false
+	}
+
+	for _, badge := range badges {
+		b, ok := badge.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		metaBadge, ok := b["metadataBadgeRenderer"].(map[string]interface{})
+		if !ok {
+			continue
+		}
+		label := getString(metaBadge, "label")
+		if strings.Contains(strings.ToUpper(label), "LIVE") {
+			return true
+		}
+	}
+	return false
+}
+
+// checkVerifiedStatus checks if the author is verified from owner badges
+func (p *YouTubeProvider) checkVerifiedStatus(vr map[string]interface{}) bool {
+	ownerBadges, ok := vr["ownerBadges"].([]interface{})
+	if !ok {
+		return false
+	}
+
+	for _, badge := range ownerBadges {
+		b, ok := badge.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		metaBadge, ok := b["metadataBadgeRenderer"].(map[string]interface{})
+		if !ok {
+			continue
+		}
+		if getString(metaBadge, "style") == "BADGE_STYLE_TYPE_VERIFIED" {
+			return true
+		}
+	}
+	return false
 }
